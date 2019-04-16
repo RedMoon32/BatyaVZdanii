@@ -9,5 +9,5 @@ file(GLOB SOURCES
 set(CMAKE_C_STANDARD 99)
 include_directories(src)
 
-add_executable(PPM_Converter ${SOURCES})
-add_executable(PPM_Tests ${SOURCES} tests/test_matrix.c)
+add_executable(PPM_Converter ${SOURCES} src/shared/log.c src/shared/log.h)
+add_executable(PPM_Tests ${SOURCES} tests/test_matrix.c src/shared/log.c src/shared/log.h)
