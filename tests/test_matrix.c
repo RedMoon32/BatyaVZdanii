@@ -32,26 +32,55 @@ void test_read_file() {
     assert(p->matrix[1][1]->g == 230);
 }
 
-void test_read_and_write_file(){
+void test_read_and_write_file() {
     struct ppm_file f1 = {.height = 4, .width = 2, .type = "P3", .matrix = NULL, .max_color = 255};
     allocate_matrix(&f1);
-    for (int i = 0;i<f1.width*f1.height;i++)
-        set_color(&f1,i,100,50,200);
-    save_ppm(&f1,"../tests/res.ppm");
-    struct ppm_file* f2 = read_ppm("../tests/res.ppm");
+    for (int i = 0; i < f1.width * f1.height; i++)
+        set_color(&f1, i, 100, 50, 200);
+    save_ppm(&f1, "../tests/res.ppm");
+    struct ppm_file *f2 = read_ppm("../tests/res.ppm");
     assert(f2->max_color == f1.max_color);
     assert(f2->height == f1.height);
     assert(f2->width == f1.width);
-    for (int i = 0;i<f1.height;i++)
-        for (int j=0;j<f1.width;j++)
-            for (int c=0;c<NUMBER_OF_COLORS;c++)
-                assert(f2->matrix[i][j]->rgb[c]==f1.matrix[i][j]->rgb[c]);
+    for (int i = 0; i < f1.height; i++)
+        for (int j = 0; j < f1.width; j++)
+            for (int c = 0; c < NUMBER_OF_COLORS; c++)
+                assert(f2->matrix[i][j]->rgb[c] == f1.matrix[i][j]->rgb[c]);
 }
 
+void test_get_grayscale() {
+    struct ppm_file f1 = {.height = 2, .width = 2, .type = "P3", .matrix = NULL, .max_color = 255};
+    allocate_matrix(&f1);
+    for (int i = 0; i < f1.height * f1.width; i++)
+        set_color(&f1, i, 100, 50, 200);
+    int av = (100 + 50 + 200) / 3;
+    int **grayscale = get_grayscale(&f1);
+    for (int i = 0; i < f1.height; i++) {
+        for (int j = 0; j < f1.width; j++)
+            assert(grayscale[i][j] == av);
+    }
+}
+
+void run_grayscale_from_image(){
+    struct ppm_file *f1 = read_ppm("../tests/natur.ppm");
+    int **gray = get_grayscale(f1);
+    for (int i = 0;i< f1->width*f1->height;i++){
+        {
+            int r = ceil(i/f1->width), c = i%f1->width;
+            int av = gray[r][c];
+            set_color(f1,i,av,av,av);
+        }
+    }
+    save_ppm(f1,"../tests/res3.ppm");
+}
+
+
 int main() {
+    run_grayscale_from_image();
     test_malloc_matrix();
     test_free_matrix();
     test_read_file();
     test_read_and_write_file();
+    test_get_grayscale();
     printf("Success tests\n");
 }

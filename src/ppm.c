@@ -94,17 +94,31 @@ int save_ppm(struct ppm_file *file, char *file_path) {
     if (fp == NULL)
         return -1;
     fprintf(fp, "%s\n", file->type);
-    fprintf(fp, "%d %d\n",file->height,file->width);
+    fprintf(fp, "%d %d\n", file->height, file->width);
     if (file->matrix == NULL)
         return -1;
-    fprintf(fp, "%d\n",file->max_color);
-    for (int i = 0; i < file->height; i++){
-        for (int j = 0; j < file->width; j++){
-            color8* color = file->matrix[i][j];
-            fprintf(fp, "%d %d %d ",color->r,color->g,color->b);
+    fprintf(fp, "%d\n", file->max_color);
+    for (int i = 0; i < file->height; i++) {
+        for (int j = 0; j < file->width; j++) {
+            color8 *color = file->matrix[i][j];
+            fprintf(fp, "%d %d %d ", color->r, color->g, color->b);
         }
-        fprintf(fp,"\n");
+        fprintf(fp, "\n");
     }
     fclose(fp);
     return 0;
+}
+
+/*Function to convert rgb image to grayscale*/
+int **get_grayscale(struct ppm_file *image) {
+    int **arr = (int **) malloc(image->height * sizeof(int **));
+    for (int i = 0; i < image->height; i++) {
+        arr[i] = (int *) malloc(image->width * sizeof(int));
+        for (int j = 0; j < image->width; j++) {
+            color8 *color = image->matrix[i][j];
+            int grayscale = (color->r + color->g + color->b) / 3;
+            arr[i][j] = grayscale;
+        }
+    }
+    return arr;
 }

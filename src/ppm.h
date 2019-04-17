@@ -43,4 +43,9 @@ int save_ppm(struct ppm_file *file, char *file_path);
 void display_matrix(struct ppm_file *file);
 
 void set_color(struct ppm_file *file, int index, int r, int g, int b);
+
+int **get_grayscale(struct ppm_file* image);
+
+void convert_to_sobel(struct ppm_file* image);
+
 #endif //PPM_CONVERTER_PPM_H
