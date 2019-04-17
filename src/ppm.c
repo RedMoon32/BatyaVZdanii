@@ -18,7 +18,7 @@
 void allocate_matrix(struct ppm_file *im) {
     color8 ***arr = (color8 ***) malloc(im->height * sizeof(color8 **));
     for (int i = 0; i < im->height; i++) {
-        arr[i] = (char **) malloc(im->width * sizeof(color8 *));
+        arr[i] = (color8 **) malloc(im->width * sizeof(color8 *));
         for (int j = 0; j < im->width; j++) {
             arr[i][j] = (color8 *) malloc(sizeof(color8));
             memset(arr[i][j], 0, NUMBER_OF_COLORS);
@@ -52,7 +52,7 @@ void display_matrix(struct ppm_file *file) {
 }
 
 void set_color(struct ppm_file *file, int index, int r, int g, int b) {
-    int row = ceil(index / file->height);
+    int row = ceil(index / file->width);
     int column = index % file->width;
     file->matrix[row][column]->r = r;
     file->matrix[row][column]->g = g;
@@ -81,17 +81,30 @@ struct ppm_file *read_ppm(char *filename) {
         set_color(new_file, index, r, g, b);
         index++;
     }
-    if (index != (new_file->width * new_file->height - 1)) {
+    if (index != (new_file->width * new_file->height)) {
         log_warn("Number of retrieved pixels is lesser than in definition");
     }
+    fclose(source);
     return new_file;
 }
 
 /*Function to save PPM image to some path*/
 int save_ppm(struct ppm_file *file, char *file_path) {
-//    FILE *fp = fopen(file_path,"w");
-//    if (fp == NULL)
-//        return -1;
-//    fwrite(file->type,)
-//    char buff[1024]
+    FILE *fp = fopen(file_path, "w");
+    if (fp == NULL)
+        return -1;
+    fprintf(fp, "%s\n", file->type);
+    fprintf(fp, "%d %d\n",file->height,file->width);
+    if (file->matrix == NULL)
+        return -1;
+    fprintf(fp, "%d\n",file->max_color);
+    for (int i = 0; i < file->height; i++){
+        for (int j = 0; j < file->width; j++){
+            color8* color = file->matrix[i][j];
+            fprintf(fp, "%d %d %d ",color->r,color->g,color->b);
+        }
+        fprintf(fp,"\n");
+    }
+    fclose(fp);
+    return 0;
 }

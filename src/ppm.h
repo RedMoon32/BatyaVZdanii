@@ -11,7 +11,7 @@
 #include <string.h>
 #include <math.h>
 
-#define TYPE_SIZE 2
+#define TYPE_SIZE 3
 #define NUMBER_OF_COLORS 3
 #define P3 "P3"
 
@@ -42,4 +42,5 @@ int save_ppm(struct ppm_file *file, char *file_path);
 
 void display_matrix(struct ppm_file *file);
 
+void set_color(struct ppm_file *file, int index, int r, int g, int b);
 #endif //PPM_CONVERTER_PPM_H
