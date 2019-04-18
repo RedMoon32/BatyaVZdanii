@@ -13,6 +13,7 @@
 
 #define TYPE_SIZE 3
 #define NUMBER_OF_COLORS 3
+#define SOBEL_THRESHOLD 70
 #define P3 "P3"
 
 typedef union {
@@ -31,6 +32,8 @@ struct ppm_file {
     color8 ***matrix;
 };
 
+extern int GX[3][3];
+extern int GY[3][3];
 
 void allocate_matrix(struct ppm_file *im);
 
@@ -44,8 +47,10 @@ void display_matrix(struct ppm_file *file);
 
 void set_color(struct ppm_file *file, int index, int r, int g, int b);
 
-int **get_grayscale(struct ppm_file* image);
+int **get_grayscale(struct ppm_file *image);
 
-void convert_to_sobel(struct ppm_file* image);
+int **convert_to_sobel(int **grayscale, struct ppm_file*);
+
+void convert_to_grayscale(struct ppm_file *f1, int **gray);
 
 #endif //PPM_CONVERTER_PPM_H

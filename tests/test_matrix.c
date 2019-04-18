@@ -33,7 +33,7 @@ void test_read_file() {
 }
 
 void test_read_and_write_file() {
-    struct ppm_file f1 = {.height = 4, .width = 2, .type = "P3", .matrix = NULL, .max_color = 255};
+    struct ppm_file f1 = {.height = 2, .width = 4, .type = "P3", .matrix = NULL, .max_color = 255};
     allocate_matrix(&f1);
     for (int i = 0; i < f1.width * f1.height; i++)
         set_color(&f1, i, 100, 50, 200);
@@ -61,22 +61,24 @@ void test_get_grayscale() {
     }
 }
 
-void run_grayscale_from_image(){
+void test_grayscale_from_image() {
     struct ppm_file *f1 = read_ppm("../tests/natur.ppm");
-    int **gray = get_grayscale(f1);
-    for (int i = 0;i< f1->width*f1->height;i++){
-        {
-            int r = ceil(i/f1->width), c = i%f1->width;
-            int av = gray[r][c];
-            set_color(f1,i,av,av,av);
-        }
-    }
-    save_ppm(f1,"../tests/res3.ppm");
+    convert_to_grayscale(f1, get_grayscale(f1));
+    save_ppm(f1, "../tests/res.ppm");
 }
 
+void run_sobel_from_grayscale() {
+    struct ppm_file *f1 = read_ppm("../tests/engine.ppm");
+    int **gray = get_grayscale(f1);
+    int **new_gray = convert_to_sobel(gray,f1);
+    convert_to_grayscale(f1, new_gray);
+    save_ppm(f1, "../tests/result.ppm");
+
+}
 
 int main() {
-    run_grayscale_from_image();
+    run_sobel_from_grayscale();
+    test_grayscale_from_image();
     test_malloc_matrix();
     test_free_matrix();
     test_read_file();

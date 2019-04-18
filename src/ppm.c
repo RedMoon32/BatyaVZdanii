@@ -11,7 +11,12 @@
 #include <math.h>
 
 #define BUFF_SIZE 65536
-
+int GX[3][3] = {{-1, 0, 1},
+                {-2, 0, 2},
+                {-1, 0, 1}};
+int GY[3][3] = {{-1, -2, -1},
+                {0,  0,  0},
+                {1,  2,  1}};
 
 /* Function allocates memory for width*height
  * matrix */
@@ -72,7 +77,7 @@ struct ppm_file *read_ppm(char *filename) {
         free(new_file);
         return NULL;
     }
-    fscanf(source, "%u %u", &new_file->height, &new_file->width);
+    fscanf(source, "%u %u", &new_file->width, &new_file->height);
     int index = 0;
     int r, g, b;
     allocate_matrix(new_file);
@@ -94,7 +99,7 @@ int save_ppm(struct ppm_file *file, char *file_path) {
     if (fp == NULL)
         return -1;
     fprintf(fp, "%s\n", file->type);
-    fprintf(fp, "%d %d\n", file->height, file->width);
+    fprintf(fp, "%d %d\n", file->width, file->height);
     if (file->matrix == NULL)
         return -1;
     fprintf(fp, "%d\n", file->max_color);
@@ -109,11 +114,21 @@ int save_ppm(struct ppm_file *file, char *file_path) {
     return 0;
 }
 
+
+int **allocate_double_matrix(int height, int width) {
+    int **arr = (int **) malloc(height * sizeof(int **));
+    for (int i = 0; i < height; i++) {
+        arr[i] = (int *) malloc(width * sizeof(int));
+        memset(arr[i], 0, width * sizeof(int));
+    }
+    return arr;
+}
+
 /*Function to convert rgb image to grayscale*/
 int **get_grayscale(struct ppm_file *image) {
-    int **arr = (int **) malloc(image->height * sizeof(int **));
+    //int **arr = malloc_double_matrix()
+    int **arr = allocate_double_matrix(image->height, image->width);
     for (int i = 0; i < image->height; i++) {
-        arr[i] = (int *) malloc(image->width * sizeof(int));
         for (int j = 0; j < image->width; j++) {
             color8 *color = image->matrix[i][j];
             int grayscale = (color->r + color->g + color->b) / 3;
@@ -121,4 +136,34 @@ int **get_grayscale(struct ppm_file *image) {
         }
     }
     return arr;
+}
+
+int **convert_to_sobel(int **grayscale, struct ppm_file *f) {
+    int **res = allocate_double_matrix(f->height, f->width);
+    for (int i = 1; i < f->height - 1; i++) {
+        for (int j = 1; j < f->width - 1; j++) {
+            int s1 = 0, s2 = 0;
+            for (int cur_r = 0; cur_r <= 2; cur_r++) {
+                for (int cur_c = 0; cur_c <= 2; cur_c++) {
+                    s1 += GX[cur_r][cur_c] * grayscale[cur_r + i - 1][cur_c + j - 1];
+                    s2 += GY[cur_r][cur_c] * grayscale[cur_r + i - 1][cur_c + j - 1];
+                }
+            }
+            res[i][j] = fmin(255, fmax(0, ceil(sqrt(s1 * s1 + s2 * s2))));
+
+            //res[i][j] = fmax(0, res[i][j] - SOBEL_THRESHOLD);
+        }
+    }
+    return res;
+}
+
+void convert_to_grayscale(struct ppm_file *f1, int **gray) {
+    for (int i = 0; i < f1->width * f1->height; i++) {
+        {
+            int r = ceil(i / f1->width), c = i % f1->width;
+            int av = gray[r][c];
+            set_color(f1, i, av, av, av);
+        }
+    }
+    free(gray);
 }
