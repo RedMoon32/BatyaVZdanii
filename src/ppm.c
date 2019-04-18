@@ -12,6 +12,8 @@
 #include <pthread.h>
 
 #define BUFF_SIZE 65536
+
+
 int GX[3][3] = {{-1, 0, 1},
                 {-2, 0, 2},
                 {-1, 0, 1}};
@@ -75,9 +77,12 @@ void set_color(struct ppm_image *file, int index, int r, int g, int b) {
 /* Function reads file specified by path and returns pointer to ppm_image
 * struct */
 struct ppm_image *read_ppm(char *filename) {
+    log_info("Opening the image %s", filename);
     FILE *source = fopen(filename, "r");
-    if (source == NULL)
+    if (source == NULL) {
+        log_error("Error while opening the image");
         return NULL;
+    }
     struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
     if (strcasecmp(new_file->type, "P3") != 0) // More types can be added
@@ -85,6 +90,7 @@ struct ppm_image *read_ppm(char *filename) {
         free(new_file);
         return NULL;
     }
+    log_info("Parsing image");
     fscanf(source, "%u %u", &new_file->width, &new_file->height);
     int index = 0;
     int r, g, b;
@@ -98,14 +104,18 @@ struct ppm_image *read_ppm(char *filename) {
         log_warn("Number of retrieved pixels is lesser than in definition");
     }
     fclose(source);
+    log_info("Successfully parsed image");
     return new_file;
 }
 
 /*Function to save PPM image to some cpecified path*/
 int save_ppm(struct ppm_image *file, char *file_path) {
+    log_info("Saving image...");
     FILE *fp = fopen(file_path, "w");
-    if (fp == NULL)
+    if (fp == NULL) {
+        log_error("Error opening the file");
         return -1;
+    }
     fprintf(fp, "%s\n", file->type);
     fprintf(fp, "%d %d\n", file->width, file->height);
     if (file->matrix == NULL)
@@ -119,6 +129,7 @@ int save_ppm(struct ppm_image *file, char *file_path) {
         fprintf(fp, "\n");
     }
     fclose(fp);
+    log_info("Successfully saved to %s",file_path);
     return 0;
 }
 
@@ -134,6 +145,7 @@ u_int8_t **allocate_double_matrix(int height, int width) {
 
 /*Function to convert rgb image to grayscale*/
 struct grayscale_image *get_grayscale(struct ppm_image *image) {
+    log_info("Converting to grayscale ...");
     struct grayscale_image *gi = malloc(sizeof(struct grayscale_image));
     u_int8_t **arr = allocate_double_matrix(image->height, image->width);
     for (int i = 0; i < image->height; i++) {
@@ -152,26 +164,27 @@ struct grayscale_image *get_grayscale(struct ppm_image *image) {
 
 void *calc_part(void *arg) {
     struct ptargs *args = (struct ptargs *) arg;
-
+    log_info("New thread has been started");
     int end_row = args->end_row,
             end_col = args->end_col,
             start_col = args->start_col,
             start_row = args->start_row;
-
     end_row = fmin(end_row, args->gr->height - 1);
     end_col = fmin(end_col, args->gr->width - 1);
+    u_int8_t **matrx = args->gr->matrix;
     for (int i = start_row; i < end_row; i++) {
         for (int j = start_col; j < end_col; j++) {
             int s1 = 0, s2 = 0;
             for (int cur_r = 0; cur_r <= 2; cur_r++) {
                 for (int cur_c = 0; cur_c <= 2; cur_c++) {
-                    s1 += GX[cur_r][cur_c] * args->gr->matrix[cur_r + i - 1][cur_c + j - 1];
-                    s2 += GY[cur_r][cur_c] * args->gr->matrix[cur_r + i - 1][cur_c + j - 1];
+                    s1 += GX[cur_r][cur_c] * matrx[cur_r + i - 1][cur_c + j - 1];
+                    s2 += GY[cur_r][cur_c] * matrx[cur_r + i - 1][cur_c + j - 1];
                 }
             }
             args->res[i][j] = fmin(255, fmax(0, ceil(sqrt(s1 * s1 + s2 * s2))));
         }
     }
+    log_info("Thread ended calculations");
 }
 
 /* Function applies Sobel Operator to input grayscale image and returns
@@ -181,6 +194,7 @@ struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_
     int rows = gr->height, columns = gr->width;
     u_int8_t **res = allocate_double_matrix(rows, columns);
     int rnext = 1;
+    log_info("Applying sobel operator...");
     if (thread_count > MAX_NUMBER_OF_THREADS) {
         log_warn("Too many number of threads");
         thread_count = MAX_NUMBER_OF_THREADS;
@@ -194,11 +208,10 @@ struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_
         data[l].end_col = columns - 1;
         data[l].gr = gr;
         data[l].res = res;
-        //calc_part(res, gr, rnext, rnext + ceil(rows / thread_count), 1, columns - 1);
         pthread_create(&row_threads[l], NULL, calc_part, (void *) &data[l]);
         rnext = rnext + ceil(rows / thread_count);
     }
-    for (int i =0 ;i <thread_count;i++)
+    for (int i = 0; i < thread_count; i++)
         pthread_join(row_threads[i], NULL);
     new_im->matrix = res;
     new_im->width = gr->width;
@@ -215,5 +228,4 @@ void convert_to_grayscale(struct ppm_image *f1, u_int8_t **gray) {
             set_color(f1, i, av, av, av);
         }
     }
-
 }

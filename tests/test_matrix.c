@@ -71,35 +71,36 @@ void test_grayscale_from_image() {
 void run_sobel_from_grayscale(char *path) {
     struct ppm_image *f1 = read_ppm(path);
     struct grayscale_image *gray = get_grayscale(f1);
-    clock_t begin = clock();
-    struct grayscale_image *new_gray = convert_to_sobel(gray, 4);
-    clock_t end = clock();
-    double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-    printf("Time spent on converting image %f\n", time_spent);
+    struct grayscale_image *new_gray = convert_to_sobel(gray, 2);
     convert_to_grayscale(f1, new_gray->matrix);
     save_ppm(f1, "../tests/result.ppm");
 }
 
-void run_sobel_from_grayscale2(char *path) {
-    struct ppm_image f1 = {.width = 16000,.height = 16000,.matrix = NULL, .max_color = 255};
+void benchmark_1() {
+    struct ppm_image f1 = {.width = 1000, .height = 100000, .matrix = NULL, .max_color = 255};
     allocate_matrix(&f1);
     struct grayscale_image *gray = get_grayscale(&f1);
-    clock_t begin = clock();
-    struct grayscale_image *new_gray = convert_to_sobel(gray, 1);
-    clock_t end = clock();
-    double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-    printf("Time spent on converting image %f\n", time_spent);
-    convert_to_grayscale(&f1, new_gray->matrix);
-    //save_ppm(&f1, "../tests/result.ppm");
+    time_t begin = time(NULL);
+
+    convert_to_sobel(gray, 1);
+    time_t end = time(NULL);
+    printf("Time spent on converting image with 1 thread %d\n", (end - begin));
+
+    begin = time(NULL);
+    convert_to_sobel(gray, 4);
+    end = time(NULL);
+    printf("Time spent on converting image with 4 thread %d\n", (end - begin));
+
 }
 
 int main() {
-    run_sobel_from_grayscale2("../tests/input.ppm");
-    test_grayscale_from_image();
     test_malloc_matrix();
     test_free_matrix();
     test_read_file();
     test_read_and_write_file();
     test_get_grayscale();
+    test_grayscale_from_image();
     printf("Success tests\n");
+    printf("Running benchmark ...\n");
+    benchmark_1();
 }
