@@ -20,7 +20,7 @@ int GY[3][3] = {{-1, -2, -1},
 
 /* Function allocates memory for width*height
  * matrix */
-void allocate_matrix(struct ppm_file *im) {
+void allocate_matrix(struct ppm_image *im) {
     color8 ***arr = (color8 ***) malloc(im->height * sizeof(color8 **));
     for (int i = 0; i < im->height; i++) {
         arr[i] = (color8 **) malloc(im->width * sizeof(color8 *));
@@ -34,7 +34,7 @@ void allocate_matrix(struct ppm_file *im) {
 
 /* Function frees width*height*3 input matrix allocated in heap
  */
-void free_matrix(struct ppm_file *im) {
+void free_matrix(struct ppm_image *im) {
     for (int i = 0; i < im->height; i++) {
         for (int j = 0; j < im->width; j++)
             free(im->matrix[i][j]);
@@ -44,7 +44,7 @@ void free_matrix(struct ppm_file *im) {
 }
 
 /* Display each rgb in matrix */
-void display_matrix(struct ppm_file *file) {
+void display_matrix(struct ppm_image *file) {
     for (int i = 0; i < file->height; i++) {
         for (int j = 0; j < file->width; j++) {
             printf(" [%d %d %d] ",
@@ -56,7 +56,8 @@ void display_matrix(struct ppm_file *file) {
     }
 }
 
-void set_color(struct ppm_file *file, int index, int r, int g, int b) {
+/* Functin sets color of pixel of input image to specified [r g b] image */
+void set_color(struct ppm_image *file, int index, int r, int g, int b) {
     int row = ceil(index / file->width);
     int column = index % file->width;
     file->matrix[row][column]->r = r;
@@ -64,13 +65,13 @@ void set_color(struct ppm_file *file, int index, int r, int g, int b) {
     file->matrix[row][column]->b = b;
 }
 
-/* Function reads file specified by path and returns pointer to ppm_file
+/* Function reads file specified by path and returns pointer to ppm_image
 * struct */
-struct ppm_file *read_ppm(char *filename) {
+struct ppm_image *read_ppm(char *filename) {
     FILE *source = fopen(filename, "r");
     if (source == NULL)
         return NULL;
-    struct ppm_file *new_file = malloc(sizeof(struct ppm_file));
+    struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
     if (strcasecmp(new_file->type, "P3") != 0) // More types can be added
     {
@@ -93,8 +94,8 @@ struct ppm_file *read_ppm(char *filename) {
     return new_file;
 }
 
-/*Function to save PPM image to some path*/
-int save_ppm(struct ppm_file *file, char *file_path) {
+/*Function to save PPM image to some cpecified path*/
+int save_ppm(struct ppm_image *file, char *file_path) {
     FILE *fp = fopen(file_path, "w");
     if (fp == NULL)
         return -1;
@@ -114,20 +115,20 @@ int save_ppm(struct ppm_file *file, char *file_path) {
     return 0;
 }
 
-
-int **allocate_double_matrix(int height, int width) {
-    int **arr = (int **) malloc(height * sizeof(int **));
+/* Allocate double matrix of type uint8t with size height*width */
+u_int8_t **allocate_double_matrix(int height, int width) {
+    u_int8_t **arr = (u_int8_t **) malloc(height * sizeof(u_int8_t **));
     for (int i = 0; i < height; i++) {
-        arr[i] = (int *) malloc(width * sizeof(int));
-        memset(arr[i], 0, width * sizeof(int));
+        arr[i] = (u_int8_t *) malloc(width * sizeof(u_int8_t));
+        memset(arr[i], 0, width * sizeof(u_int8_t));
     }
     return arr;
 }
 
 /*Function to convert rgb image to grayscale*/
-int **get_grayscale(struct ppm_file *image) {
-    //int **arr = malloc_double_matrix()
-    int **arr = allocate_double_matrix(image->height, image->width);
+struct grayscale_image *get_grayscale(struct ppm_image *image) {
+    struct grayscale_image *gi = malloc(sizeof(struct grayscale_image));
+    u_int8_t **arr = allocate_double_matrix(image->height, image->width);
     for (int i = 0; i < image->height; i++) {
         for (int j = 0; j < image->width; j++) {
             color8 *color = image->matrix[i][j];
@@ -135,29 +136,37 @@ int **get_grayscale(struct ppm_file *image) {
             arr[i][j] = grayscale;
         }
     }
-    return arr;
+    gi->matrix = arr;
+    gi->height = image->height;
+    gi->width = image->width;
+    return gi;
 }
 
-int **convert_to_sobel(int **grayscale, struct ppm_file *f) {
-    int **res = allocate_double_matrix(f->height, f->width);
-    for (int i = 1; i < f->height - 1; i++) {
-        for (int j = 1; j < f->width - 1; j++) {
+/* Function applies Sobel Operator to input grayscale image and returns
+ * new output grayscale image with edge detected */
+struct grayscale_image *convert_to_sobel(struct grayscale_image *gr) {
+    struct grayscale_image *new_im = malloc(sizeof(struct grayscale_image));
+    u_int8_t **res = allocate_double_matrix(gr->height, gr->width);
+    for (int i = 1; i < gr->height - 1; i++) {
+        for (int j = 1; j < gr->width - 1; j++) {
             int s1 = 0, s2 = 0;
             for (int cur_r = 0; cur_r <= 2; cur_r++) {
                 for (int cur_c = 0; cur_c <= 2; cur_c++) {
-                    s1 += GX[cur_r][cur_c] * grayscale[cur_r + i - 1][cur_c + j - 1];
-                    s2 += GY[cur_r][cur_c] * grayscale[cur_r + i - 1][cur_c + j - 1];
+                    s1 += GX[cur_r][cur_c] * gr->matrix[cur_r + i - 1][cur_c + j - 1];
+                    s2 += GY[cur_r][cur_c] * gr->matrix[cur_r + i - 1][cur_c + j - 1];
                 }
             }
             res[i][j] = fmin(255, fmax(0, ceil(sqrt(s1 * s1 + s2 * s2))));
-
-            //res[i][j] = fmax(0, res[i][j] - SOBEL_THRESHOLD);
         }
     }
-    return res;
+    new_im->matrix = res;
+    new_im->width = gr->width;
+    new_im->height = gr->height;
+    return new_im;
 }
 
-void convert_to_grayscale(struct ppm_file *f1, int **gray) {
+/* Function converts each [i,j] pixel in f1 ppm image to pixel with gray[i][j] color */
+void convert_to_grayscale(struct ppm_image *f1, u_int8_t **gray) {
     for (int i = 0; i < f1->width * f1->height; i++) {
         {
             int r = ceil(i / f1->width), c = i % f1->width;
@@ -165,5 +174,5 @@ void convert_to_grayscale(struct ppm_file *f1, int **gray) {
             set_color(f1, i, av, av, av);
         }
     }
-    free(gray);
+
 }

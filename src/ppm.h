@@ -24,7 +24,7 @@ typedef union {
 } color8;
 
 
-struct ppm_file {
+struct ppm_image {
     char type[TYPE_SIZE];
     int width;
     int height;
@@ -32,25 +32,31 @@ struct ppm_file {
     color8 ***matrix;
 };
 
+struct grayscale_image {
+    int width;
+    int height;
+    u_int8_t **matrix;
+};
+
 extern int GX[3][3];
 extern int GY[3][3];
 
-void allocate_matrix(struct ppm_file *im);
+void allocate_matrix(struct ppm_image *im);
 
-void free_matrix(struct ppm_file *im);
+void free_matrix(struct ppm_image *im);
 
-struct ppm_file *read_ppm(char *file_path);
+struct ppm_image *read_ppm(char *file_path);
 
-int save_ppm(struct ppm_file *file, char *file_path);
+int save_ppm(struct ppm_image *file, char *file_path);
 
-void display_matrix(struct ppm_file *file);
+void display_matrix(struct ppm_image *file);
 
-void set_color(struct ppm_file *file, int index, int r, int g, int b);
+void set_color(struct ppm_image *file, int index, int r, int g, int b);
 
-int **get_grayscale(struct ppm_file *image);
+struct grayscale_image* get_grayscale(struct ppm_image* image);
 
-int **convert_to_sobel(int **grayscale, struct ppm_file*);
+struct grayscale_image* convert_to_sobel(struct grayscale_image* grayscale);
 
-void convert_to_grayscale(struct ppm_file *f1, int **gray);
+void convert_to_grayscale(struct ppm_image *f1, u_int8_t  **gray);
 
 #endif //PPM_CONVERTER_PPM_H
