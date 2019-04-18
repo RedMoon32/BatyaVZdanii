@@ -9,6 +9,7 @@
 #include <memory.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
 
 #define BUFF_SIZE 65536
 int GX[3][3] = {{-1, 0, 1},
@@ -17,6 +18,12 @@ int GX[3][3] = {{-1, 0, 1},
 int GY[3][3] = {{-1, -2, -1},
                 {0,  0,  0},
                 {1,  2,  1}};
+
+struct ptargs {
+    u_int8_t **res;
+    struct grayscale_image *gr;
+    int start_row, end_row, start_col, end_col;
+};
 
 /* Function allocates memory for width*height
  * matrix */
@@ -142,23 +149,57 @@ struct grayscale_image *get_grayscale(struct ppm_image *image) {
     return gi;
 }
 
-/* Function applies Sobel Operator to input grayscale image and returns
- * new output grayscale image with edge detected */
-struct grayscale_image *convert_to_sobel(struct grayscale_image *gr) {
-    struct grayscale_image *new_im = malloc(sizeof(struct grayscale_image));
-    u_int8_t **res = allocate_double_matrix(gr->height, gr->width);
-    for (int i = 1; i < gr->height - 1; i++) {
-        for (int j = 1; j < gr->width - 1; j++) {
+
+void *calc_part(void *arg) {
+    struct ptargs *args = (struct ptargs *) arg;
+
+    int end_row = args->end_row,
+            end_col = args->end_col,
+            start_col = args->start_col,
+            start_row = args->start_row;
+
+    end_row = fmin(end_row, args->gr->height - 1);
+    end_col = fmin(end_col, args->gr->width - 1);
+    for (int i = start_row; i < end_row; i++) {
+        for (int j = start_col; j < end_col; j++) {
             int s1 = 0, s2 = 0;
             for (int cur_r = 0; cur_r <= 2; cur_r++) {
                 for (int cur_c = 0; cur_c <= 2; cur_c++) {
-                    s1 += GX[cur_r][cur_c] * gr->matrix[cur_r + i - 1][cur_c + j - 1];
-                    s2 += GY[cur_r][cur_c] * gr->matrix[cur_r + i - 1][cur_c + j - 1];
+                    s1 += GX[cur_r][cur_c] * args->gr->matrix[cur_r + i - 1][cur_c + j - 1];
+                    s2 += GY[cur_r][cur_c] * args->gr->matrix[cur_r + i - 1][cur_c + j - 1];
                 }
             }
-            res[i][j] = fmin(255, fmax(0, ceil(sqrt(s1 * s1 + s2 * s2))));
+            args->res[i][j] = fmin(255, fmax(0, ceil(sqrt(s1 * s1 + s2 * s2))));
         }
     }
+}
+
+/* Function applies Sobel Operator to input grayscale image and returns
+ * new output grayscale image with edge detected */
+struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_count) {
+    struct grayscale_image *new_im = malloc(sizeof(struct grayscale_image));
+    int rows = gr->height, columns = gr->width;
+    u_int8_t **res = allocate_double_matrix(rows, columns);
+    int rnext = 1;
+    if (thread_count > MAX_NUMBER_OF_THREADS) {
+        log_warn("Too many number of threads");
+        thread_count = MAX_NUMBER_OF_THREADS;
+    }
+    pthread_t row_threads[thread_count];
+    struct ptargs data[thread_count];
+    for (int l = 0; l < thread_count; l++) {
+        data[l].start_row = rnext;
+        data[l].end_row = rnext + ceil(rows / thread_count);
+        data[l].start_col = 1;
+        data[l].end_col = columns - 1;
+        data[l].gr = gr;
+        data[l].res = res;
+        //calc_part(res, gr, rnext, rnext + ceil(rows / thread_count), 1, columns - 1);
+        pthread_create(&row_threads[l], NULL, calc_part, (void *) &data[l]);
+        rnext = rnext + ceil(rows / thread_count);
+    }
+    for (int i =0 ;i <thread_count;i++)
+        pthread_join(row_threads[i], NULL);
     new_im->matrix = res;
     new_im->width = gr->width;
     new_im->height = gr->height;

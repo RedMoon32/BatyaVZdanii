@@ -92,7 +92,7 @@ void log_set_quiet(int enable) {
 }
 
 
-void log_log(int level, const char *file, int line, const char *fmt, ...) {
+void log_log(int level, int line, const char *fmt, ...) {
     if (level < L.level) {
         return;
     }
@@ -114,7 +114,7 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
       stderr, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
       buf, level_colors[level], level_names[level], file, line);
 #else
-        fprintf(stderr, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
+        fprintf(stderr, "%s %-5s : ", buf, level_names[level]);
 #endif
         va_start(args, fmt);
         vfprintf(stderr, fmt, args);
@@ -128,7 +128,7 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
         va_list args;
         char buf[32];
         buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", lt)] = '\0';
-        fprintf(L.fp, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
+        fprintf(L.fp, "%s %-5s : ", buf, level_names[level]);
         va_start(args, fmt);
         vfprintf(L.fp, fmt, args);
         va_end(args);
