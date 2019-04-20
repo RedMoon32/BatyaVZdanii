@@ -33,6 +33,7 @@
 
 #include "log.h"
 
+
 static struct {
     void *udata;
     log_LockFn lock;

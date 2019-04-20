@@ -44,12 +44,15 @@ void allocate_matrix(struct ppm_image *im) {
 /* Function frees width*height*3 input matrix allocated in heap
  */
 void free_matrix(struct ppm_image *im) {
+    if (im->matrix == NULL)
+        return;
     for (int i = 0; i < im->height; i++) {
         for (int j = 0; j < im->width; j++)
             free(im->matrix[i][j]);
         free(im->matrix[i]);
     }
     free(im->matrix);
+    im->matrix = NULL;
 }
 
 /* Display each rgb in matrix */
@@ -85,7 +88,8 @@ struct ppm_image *read_ppm(char *filename) {
     }
     struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
-    if (strcasecmp(new_file->type, "P3") != 0) // More types can be added
+    if (strcasecmp(new_file->type, "P6") != 0 &&
+        strcasecmp(new_file->type, "P3") != 0) // More types can be added
     {
         free(new_file);
         return NULL;
@@ -93,20 +97,32 @@ struct ppm_image *read_ppm(char *filename) {
     log_info("Parsing image");
     fscanf(source, "%u %u", &new_file->width, &new_file->height);
     int index = 0;
-    int r, g, b;
     allocate_matrix(new_file);
     fscanf(source, "%d", &new_file->max_color);
-    while (fscanf(source, "%d %d %d", &r, &g, &b) == 3) {
-        set_color(new_file, index, r, g, b);
-        index++;
+    int r, g, b;
+    if (strcasecmp(new_file->type, "P3") == 0) {
+        while (fscanf(source, "%d %d %d", &r, &g, &b) == 3) {
+            set_color(new_file, index, r, g, b);
+            index++;
+        }
+    } else if (strcasecmp(new_file->type, "P6") == 0) {
+        for (int i = 0; i < new_file->height; i++) {
+            for (int j = 0; j < new_file->width; j++) {
+                int read = fread(new_file->matrix[i][j]->rgb, sizeof(u_int8_t), 3, source);
+                if (read < 3) {
+                    return NULL;
+                }
+            }
+        }
     }
-    if (index != (new_file->width * new_file->height)) {
-        log_warn("Number of retrieved pixels is lesser than in definition");
-    }
+//    if (index != (new_file->width * new_file->height)) {
+//        log_warn("Number of retrieved pixels is lesser than in definition");
+//    }
     fclose(source);
     log_info("Successfully parsed image");
     return new_file;
 }
+
 
 /*Function to save PPM image to some cpecified path*/
 int save_ppm(struct ppm_image *file, char *file_path) {
@@ -124,14 +140,19 @@ int save_ppm(struct ppm_image *file, char *file_path) {
     for (int i = 0; i < file->height; i++) {
         for (int j = 0; j < file->width; j++) {
             color8 *color = file->matrix[i][j];
-            fprintf(fp, "%d %d %d ", color->r, color->g, color->b);
+            if (strcasecmp(file->type, "P3") == 0)
+                fprintf(fp, "%d %d %d ", color->r, color->g, color->b);
+            else if (strcasecmp(file->type, "P6") == 0)
+                fwrite(&color->rgb, 3, 1, fp);
         }
-        fprintf(fp, "\n");
+        if (strcasecmp(file->type, "P3") == 0)
+            fprintf(fp, "\n");
     }
     fclose(fp);
-    log_info("Successfully saved to %s",file_path);
+    log_info("Successfully saved to %s", file_path);
     return 0;
 }
+
 
 /* Allocate double matrix of type uint8t with size height*width */
 u_int8_t **allocate_double_matrix(int height, int width) {
@@ -228,4 +249,20 @@ void convert_to_grayscale(struct ppm_image *f1, u_int8_t **gray) {
             set_color(f1, i, av, av, av);
         }
     }
+}
+
+void free_ppm_image(struct ppm_image *f1) {
+    free_matrix(f1);
+    free(f1);
+}
+
+void free_grayscale_image(struct grayscale_image *image) {
+    if (image->matrix != NULL) {
+        for (int i = 0; i < image->height; i++) {
+            free(image->matrix[i]);
+        }
+        free(image->matrix);
+        image->matrix = NULL;
+    }
+    free(image);
 }

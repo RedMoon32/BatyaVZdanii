@@ -58,4 +58,8 @@ struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_
 
 void convert_to_grayscale(struct ppm_image *f1, u_int8_t **gray);
 
+void free_ppm_image(struct ppm_image *image);
+
+void free_grayscale_image(struct grayscale_image *image);
+
 #endif //PPM_CONVERTER_PPM_H
