@@ -3,6 +3,7 @@
 //
 
 #include "ppm.h"
+#include "sobel.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -30,7 +31,9 @@ void free_matrix(struct ppm_image *im) {
         return;
     for (int i = 0; i < im->height; i++) {
         for (int j = 0; j < im->width; j++)
+            //free every pixel
             free(im->matrix[i][j]);
+        //free every row
         free(im->matrix[i]);
     }
     free(im->matrix);
@@ -41,19 +44,6 @@ void free_matrix(struct ppm_image *im) {
 void free_ppm_image(struct ppm_image *f1) {
     free_matrix(f1);
     free(f1);
-}
-
-/* Display each rgb in matrix */
-void display_matrix(struct ppm_image *file) {
-    for (int i = 0; i < file->height; i++) {
-        for (int j = 0; j < file->width; j++) {
-            printf(" [%d %d %d] ",
-                   file->matrix[i][j]->r,
-                   file->matrix[i][j]->g,
-                   file->matrix[i][j]->b);
-        }
-        printf("\n");
-    }
 }
 
 /* Function sets the color of specified pixel to given [r g b]  */
@@ -75,30 +65,24 @@ struct ppm_image *read_ppm(char *filename) {
     }
     struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
-    if (strcmp(new_file->type, "P6") != 0 &&
-        strcmp(new_file->type, "P3") != 0) // More types can be added
+
+    if (strcmp(new_file->type, "P6") != 0 && strcmp(new_file->type, "P3") != 0) // More types can be added
     {
         free(new_file);
         return NULL;
     }
 
     fscanf(source, "%u %u", &new_file->width, &new_file->height);
-    int index = 0;
     allocate_matrix(new_file);
     fscanf(source, "%d", &new_file->max_color);
-    int r, g, b;
-    if (strcmp(new_file->type, "P3") == 0) {
-        while (fscanf(source, "%d %d %d", &r, &g, &b) == 3) {
-            set_color(new_file, index, r, g, b);
-            index++;
-        }
-    } else if (strcmp(new_file->type, "P6") == 0) {
-        for (int i = 0; i < new_file->height; i++) {
-            for (int j = 0; j < new_file->width; j++) {
-                int read = fread(new_file->matrix[i][j]->rgb, sizeof(u_int8_t), 3, source);
-                if (read < 3) {
-                    return NULL;
-                }
+    int read = 0;
+    for (int i = 0; i < new_file->height; i++) {
+        for (int j = 0; j < new_file->width; j++) {
+            if (new_file->type[1] == '3') { // P3 format
+                read = fread(new_file->matrix[i][j]->rgb, sizeof(u_int8_t), 3, source);
+            } else if (new_file->type[1] == '6') { // P6 format
+                u_int8_t *c = new_file->matrix[i][j]->rgb;
+                read = fscanf(source, "%d %d %d", c, c + 1, c + 2);
             }
         }
     }
@@ -107,26 +91,27 @@ struct ppm_image *read_ppm(char *filename) {
 }
 
 /*Function to save PPM image (in P3 or P6 format) to some specified path
- *
+ * Gray - pointer to grayscale image (for saving file in P2 and P5 formats)
  * Returns -1 on error, 0 on success
  */
-int save_ppm(struct ppm_image *file, char *file_path) {
+int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gray) {
     FILE *fp = fopen(file_path, "w");
-    if (fp == NULL) {
+    if (fp == NULL || file->matrix == NULL) {
         return -1;
     }
     fprintf(fp, "%s\n", file->type);
-    fprintf(fp, "%d %d\n", file->width, file->height);
-    if (file->matrix == NULL)
-        return -1;
-    fprintf(fp, "%d\n", file->max_color);
+    fprintf(fp, "%d %d\n%d\n", file->width, file->height, file->max_color);
     for (int i = 0; i < file->height; i++) {
         for (int j = 0; j < file->width; j++) {
             color8 *color = file->matrix[i][j];
             if (strcmp(file->type, "P3") == 0)
                 fprintf(fp, "%d %d %d ", color->r, color->g, color->b);
             else if (strcmp(file->type, "P6") == 0)
-                fwrite(&color->rgb, 3, 1, fp);
+                fprintf(fp, "%c%c%c", color->r, color->g, color->b);
+            else if (strcmp(file->type, "P2") == 0)
+                fprintf(fp, "%d ", gray->matrix[i][j]);
+            else if (strcmp(file->type, "P5") == 0)
+                fprintf(fp, "%c",  gray->matrix[i][j]);
         }
         if (strcmp(file->type, "P3") == 0)
             fprintf(fp, "\n");

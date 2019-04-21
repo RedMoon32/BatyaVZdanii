@@ -41,6 +41,7 @@ struct grayscale_image *get_grayscale(struct ppm_image *image) {
     for (int i = 0; i < image->height; i++) {
         for (int j = 0; j < image->width; j++) {
             color8 *color = image->matrix[i][j];
+            //grayscale is average of three colors
             int grayscale = (color->r + color->g + color->b) / 3;
             arr[i][j] = grayscale;
         }
@@ -75,6 +76,7 @@ void *calc_part(void *arg) {
     for (int i = start_row; i < end_row; i++) {
         for (int j = start_col; j < end_col; j++) {
             int s1 = 0, s2 = 0;
+            //Calculate kernel convolution
             for (int cur_r = 0; cur_r <= 2; cur_r++) {
                 for (int cur_c = 0; cur_c <= 2; cur_c++) {
                     s1 += GX[cur_r][cur_c] * matrx[cur_r + i - 1][cur_c + j - 1];
@@ -104,10 +106,7 @@ struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_
     pthread_t row_threads[thread_count];
     struct ptargs data[thread_count];
     for (int l = 0; l < thread_count; l++) {
-        data[l].start_row = rnext;
-        data[l].end_row = rnext + ceil(rows / thread_count);
-        data[l].gr = gr;
-        data[l].res = res;
+        data[l] = (struct ptargs){.start_row = rnext, .end_row = rnext + ceil(rows / thread_count), .gr = gr, .res = res};
         pthread_create(&row_threads[l], NULL, calc_part, (void *) &data[l]);
         rnext = rnext + ceil(rows / thread_count);
     }

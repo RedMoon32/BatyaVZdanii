@@ -47,7 +47,7 @@ void test_read_and_write_file() {
     allocate_matrix(&f1);
     for (int i = 0; i < f1.width * f1.height; i++)
         set_color(&f1, i, 100, 50, 200);
-    save_ppm(&f1, "../tests/res.ppm");
+    save_ppm(&f1, "../tests/res.ppm", NULL);
     struct ppm_image *f2 = read_ppm("../tests/res.ppm");
     assert(f2->max_color == f1.max_color);
     assert(f2->height == f1.height);
@@ -80,7 +80,7 @@ void test_get_grayscale() {
 void test_grayscale_from_image() {
     struct ppm_image *f1 = read_ppm("../tests/test.ppm");
     convert_to_grayscale(f1, get_grayscale(f1)->matrix);
-    save_ppm(f1, "../tests/res.ppm");
+    save_ppm(f1, "../tests/res.ppm", NULL);
     free_ppm_image(f1);
     printf("Test 6 success\n");
 }
@@ -89,8 +89,8 @@ void run_sobel_from_grayscale(char *path) {
     struct ppm_image *f1 = read_ppm(path);
     struct grayscale_image *gray = get_grayscale(f1);
     struct grayscale_image *new_gray = convert_to_sobel(gray, 2);
-    convert_to_grayscale(f1, new_gray->matrix);
-    save_ppm(f1, "../tests/result.ppm");
+    strcpy(f1->type, "P2");
+    save_ppm(f1, "../tests/result.ppm", new_gray);
     free_ppm_image(f1);
     free_grayscale_image(gray);
     free_grayscale_image(new_gray);
@@ -111,13 +111,14 @@ double wallclock_since(wallclock_t *const tptr) {
 
 
 void benchmark_1() {
-    struct ppm_image f1 = {.width = 2000, .height = 10000, .matrix = NULL, .max_color = 255};
+    struct ppm_image f1 = {.width = 2000, .height = 5000, .matrix = NULL, .max_color = 255};
     allocate_matrix(&f1);
     struct grayscale_image *gray = get_grayscale(&f1);
     wallclock_t now;
     wallclock_mark(&now);
     struct grayscale_image *new_gray = convert_to_sobel(gray, 1);
     double wtime = wallclock_since(&now);
+    printf("Empty image of size %d * %d generated\n", f1.width, f1.height);
     printf("Time spent on converting image with 1 thread %f\n", wtime);
     free_grayscale_image(new_gray);
     wallclock_mark(&now);

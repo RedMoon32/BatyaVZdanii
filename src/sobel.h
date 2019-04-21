@@ -5,11 +5,6 @@
 #ifndef PPM_SOBEL_PPM_H
 #define PPM_SOBEL_PPM_H
 
-struct grayscale_image {
-    int width;
-    int height;
-    u_int8_t **matrix;
-};
 
 extern int GX[3][3];
 extern int GY[3][3];

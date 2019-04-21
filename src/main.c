@@ -11,7 +11,6 @@
 #include <time.h>
 
 
-
 typedef struct timeval wallclock_t;
 
 void wallclock_mark(wallclock_t *const tptr) {
@@ -28,42 +27,53 @@ double wallclock_since(wallclock_t *const tptr) {
 
 
 void process_image(char *input_file, char *output_file, char *save_mode, int thread_count) {
+
     printf("[==== NETPBM image processor ====] \n\n");
     printf("Input file path: %s \nOutput file path: %s \nSave mode: %s\nThread count: %d\n",
            input_file, output_file, save_mode,
            thread_count);
+
     wallclock_t t, sobel_time;
     wallclock_mark(&t);
     double wtime, stime;
+
     printf("\n=============\n");
     printf("[log] Opening the %s image...\n", input_file);
+
     struct ppm_image *p = read_ppm(input_file);
     if (p == NULL) {
         printf("[ERROR] Error in reading image");
         return;
     }
+
     printf("[log] Image successfully read\n[log] Converting rgb image to grayscale...\n");
+
     struct grayscale_image *gray = get_grayscale(p);
     wallclock_mark(&sobel_time);
     printf("[log] Applying sobel operator...\n");
+
     struct grayscale_image *new_gray = convert_to_sobel(gray, thread_count);
     stime = wallclock_since(&sobel_time);
     printf("[log] Converting grayscale image back to rgb representation...\n");
-    convert_to_grayscale(p, new_gray->matrix);
+    //Convert rgb to grayscale for saving if P3 or P6
+    if (p->type[1] == '3' || p->type[1] == '6')
+        convert_to_grayscale(p, new_gray->matrix);
     strcpy(p->type, save_mode);
     printf("[log] Saving image...\n");
-    int s = save_ppm(p, output_file);
+
+    int s = save_ppm(p, output_file, new_gray);
     if (s != -1)
         printf("[log] Image successfully saved to %s\n", output_file);
     else {
         printf("[ERROR] Error in saving image\n");
         return;
     }
+
     free_ppm_image(p);
     free_grayscale_image(gray);
     free_grayscale_image(new_gray);
-
     wtime = wallclock_since(&t);
+
     printf("=============\n\n");
     printf("Time of applying Sobel operator to image : %f\n", stime);
     printf("Overall running time of a program : %f\n", wtime);
@@ -74,9 +84,9 @@ int main(int argc, char *argv[]) {
     int opt;
     char *input_file = NULL,
             *output_file = NULL,
-            mode[TYPE_SIZE];
-    int thread_count = 2;
-    while ((opt = getopt(argc, argv, "i:o:p:t:")) != -1) {
+            mode[TYPE_SIZE] = "P2";
+    int thread_count = 1;
+    while ((opt = getopt(argc, argv, "i:o:s:t:")) != -1) {
         switch (opt) {
             case 'i':
                 input_file = optarg;
@@ -84,11 +94,11 @@ int main(int argc, char *argv[]) {
             case 'o':
                 output_file = optarg;
                 break;
-            case 'p':
+            case 's':
                 strcpy(mode, optarg);
-                if (strcmp(mode, "P3") != 0 &&
-                    strcmp(mode, "P6") != 0) {
-                    printf("[ERROR] Mode is not known\n");
+                if (strlen(optarg) != 2 || (mode[1] != '3' && mode[1] != '2' && mode[1] != '4' && mode[1] != '5')) {
+                    printf("[ERROR] Save mode is not known\n");
+                    return -1;
                 }
                 break;
             case 't':
@@ -97,6 +107,7 @@ int main(int argc, char *argv[]) {
                     printf("[ERROR] Thread count must be greater than 0\n");
                     return -1;
                 }
+                break;
         }
     }
     if (input_file == NULL) {
