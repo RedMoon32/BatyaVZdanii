@@ -34,7 +34,7 @@ void test_free_matrix() {
 
 void test_read_file() {
     struct ppm_image *p = read_ppm("../tests/test.ppm");
-    assert(p->width == 2 & p->height == 2);
+    assert(p->width == 2 && p->height == 2);
     assert(p->max_color == 255);
     assert(p->matrix[0][0]->r == 100);
     assert(p->matrix[1][1]->g == 230);

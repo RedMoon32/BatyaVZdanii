@@ -3,7 +3,6 @@
 //
 
 #include "ppm.h"
-#include "shared/log.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -12,8 +11,7 @@
 #include <pthread.h>
 
 
-/* Function allocates memory for width*height
- * matrix */
+/* Function allocates memory for image (image.width * image.height * 3 size) */
 void allocate_matrix(struct ppm_image *im) {
     color8 ***arr = (color8 ***) malloc(im->height * sizeof(color8 **));
     for (int i = 0; i < im->height; i++) {
@@ -26,8 +24,7 @@ void allocate_matrix(struct ppm_image *im) {
     im->matrix = arr;
 }
 
-/* Function frees width*height*3 input matrix allocated in heap
- */
+/* Function frees memory allocated for image matrix*/
 void free_matrix(struct ppm_image *im) {
     if (im->matrix == NULL)
         return;
@@ -59,7 +56,7 @@ void display_matrix(struct ppm_image *file) {
     }
 }
 
-/* Functin sets color of pixel of input image to specified [r g b] image */
+/* Function sets the color of specified pixel to given [r g b]  */
 void set_color(struct ppm_image *file, int index, int r, int g, int b) {
     int row = ceil(index / file->width);
     int column = index % file->width;
@@ -68,24 +65,23 @@ void set_color(struct ppm_image *file, int index, int r, int g, int b) {
     file->matrix[row][column]->b = b;
 }
 
-/* Function reads file specified by path and returns pointer to ppm_image
-* struct */
+/* Function reads ppm-file (P3 or P6 format) specified by path and returns pointer to ppm_image struct
+ *
+ * Returns NULL on error, or pointer to ppm image struct in case of success*/
 struct ppm_image *read_ppm(char *filename) {
-    log_info("Opening the image %s", filename);
     FILE *source = fopen(filename, "r");
     if (source == NULL) {
-        log_error("Error while opening the image");
         return NULL;
     }
     struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
-    if (strcasecmp(new_file->type, "P6") != 0 &&
-        strcasecmp(new_file->type, "P3") != 0) // More types can be added
+    if (strcmp(new_file->type, "P6") != 0 &&
+        strcmp(new_file->type, "P3") != 0) // More types can be added
     {
         free(new_file);
         return NULL;
     }
-    log_info("Parsing image");
+
     fscanf(source, "%u %u", &new_file->width, &new_file->height);
     int index = 0;
     allocate_matrix(new_file);
@@ -107,16 +103,16 @@ struct ppm_image *read_ppm(char *filename) {
         }
     }
     fclose(source);
-    log_info("Successfully parsed image");
     return new_file;
 }
 
-/*Function to save PPM image to some cpecified path*/
+/*Function to save PPM image (in P3 or P6 format) to some specified path
+ *
+ * Returns -1 on error, 0 on success
+ */
 int save_ppm(struct ppm_image *file, char *file_path) {
-    log_info("Saving image...");
     FILE *fp = fopen(file_path, "w");
     if (fp == NULL) {
-        log_error("Error opening the file");
         return -1;
     }
     fprintf(fp, "%s\n", file->type);
@@ -136,6 +132,5 @@ int save_ppm(struct ppm_image *file, char *file_path) {
             fprintf(fp, "\n");
     }
     fclose(fp);
-    log_info("Successfully saved to %s", file_path);
     return 0;
 }
