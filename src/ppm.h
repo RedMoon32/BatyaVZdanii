@@ -35,6 +35,10 @@ struct ppm_image {
     color8 ***matrix;
 };
 
+enum netpbm_type {
+    P1, P2, P3, P4, P5, P6
+};
+
 void allocate_matrix(struct ppm_image *im);
 
 void free_matrix(struct ppm_image *im);

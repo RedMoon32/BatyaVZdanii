@@ -11,6 +11,20 @@
 #include <math.h>
 #include <pthread.h>
 
+/* Function to convert string representation of format into a number
+ * for fast number comparisons */
+int get_itype(char* type){
+    enum netpbm_type res = -1;
+    if (strcmp(type, "P3") == 0)
+        res = P3;
+    else if (strcmp(type, "P6") == 0)
+        res = P6;
+    else if (strcmp(type, "P2") == 0)
+        res = P2;
+    else if (strcmp(type, "P5") == 0)
+        res = P5;
+    return res;
+}
 
 /* Function allocates memory for image (image.width * image.height * 3 size) */
 void allocate_matrix(struct ppm_image *im) {
@@ -66,29 +80,27 @@ struct ppm_image *read_ppm(char *filename) {
     struct ppm_image *new_file = malloc(sizeof(struct ppm_image));
     fscanf(source, "%2s", new_file->type);
 
-    if (strcmp(new_file->type, "P6") != 0 && strcmp(new_file->type, "P3") != 0) // More types can be added
-    {
-        free(new_file);
+    enum netpbm_type image_format = get_itype(new_file->type);
+    if (image_format == -1)
         return NULL;
-    }
-
     fscanf(source, "%u %u", &new_file->width, &new_file->height);
     allocate_matrix(new_file);
     fscanf(source, "%d", &new_file->max_color);
-    int read = 0;
+
     for (int i = 0; i < new_file->height; i++) {
         for (int j = 0; j < new_file->width; j++) {
-            if (new_file->type[1] == '3') { // P3 format
-                read = fread(new_file->matrix[i][j]->rgb, sizeof(u_int8_t), 3, source);
-            } else if (new_file->type[1] == '6') { // P6 format
+            if (image_format == P6) {
+                fread(new_file->matrix[i][j]->rgb, sizeof(u_int8_t), 3, source);
+            } else if (image_format == P3) {
                 u_int8_t *c = new_file->matrix[i][j]->rgb;
-                read = fscanf(source, "%d %d %d", c, c + 1, c + 2);
+                fscanf(source, "%d %d %d", c, c + 1, c + 2);
             }
         }
     }
     fclose(source);
     return new_file;
 }
+
 
 /*Function to save PPM image (in P3 or P6 format) to some specified path
  * Gray - pointer to grayscale image (for saving file in P2 and P5 formats)
@@ -101,19 +113,20 @@ int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gr
     }
     fprintf(fp, "%s\n", file->type);
     fprintf(fp, "%d %d\n%d\n", file->width, file->height, file->max_color);
+    enum netpbm_type image_format = get_itype(file->type);
     for (int i = 0; i < file->height; i++) {
         for (int j = 0; j < file->width; j++) {
             color8 *color = file->matrix[i][j];
-            if (strcmp(file->type, "P3") == 0)
+            if (image_format == P3)
                 fprintf(fp, "%d %d %d ", color->r, color->g, color->b);
-            else if (strcmp(file->type, "P6") == 0)
+            else if (image_format == P6)
                 fprintf(fp, "%c%c%c", color->r, color->g, color->b);
-            else if (strcmp(file->type, "P2") == 0)
+            else if (image_format == P2)
                 fprintf(fp, "%d ", gray->matrix[i][j]);
-            else if (strcmp(file->type, "P5") == 0)
+            else if (image_format == P5)
                 fprintf(fp, "%c",  gray->matrix[i][j]);
         }
-        if (strcmp(file->type, "P3") == 0)
+        if (image_format == P3)
             fprintf(fp, "\n");
     }
     fclose(fp);

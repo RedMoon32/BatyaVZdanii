@@ -96,10 +96,6 @@ int main(int argc, char *argv[]) {
                 break;
             case 's':
                 strcpy(mode, optarg);
-                if (strlen(optarg) != 2 || (mode[1] != '3' && mode[1] != '2' && mode[1] != '4' && mode[1] != '5')) {
-                    printf("[ERROR] Save mode is not known\n");
-                    return -1;
-                }
                 break;
             case 't':
                 thread_count = atoi(optarg);
