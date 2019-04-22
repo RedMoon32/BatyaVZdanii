@@ -21,11 +21,6 @@ typedef union {
     u_int8_t rgb[3];
 } color8;
 
-struct grayscale_image {
-    int width;
-    int height;
-    u_int8_t **matrix;
-};
 
 struct ppm_image {
     char type[TYPE_SIZE];
@@ -39,6 +34,9 @@ enum netpbm_type {
     P1, P2, P3, P4, P5, P6
 };
 
+
+int get_itype(char* type);
+
 void allocate_matrix(struct ppm_image *im);
 
 void free_matrix(struct ppm_image *im);
@@ -47,7 +45,7 @@ void free_ppm_image(struct ppm_image *image);
 
 struct ppm_image *read_ppm(char *file_path);
 
-int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gray);
+int save_ppm(struct ppm_image *file, char *file_path, u_int8_t **gray);
 
 void set_color(struct ppm_image *file, int index, int r, int g, int b);
 

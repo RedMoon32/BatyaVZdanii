@@ -7,7 +7,7 @@
 #include <math.h>
 #include <pthread.h>
 
-#define SOBEL_TRESHOLD 40
+#define SOBEL_TRESHOLD 10
 
 struct ptargs {
     u_int8_t **res;
@@ -35,7 +35,7 @@ u_int8_t **allocate_double_matrix(int height, int width) {
 /*Function to convert rgb image to grayscale
  *
  * Returns pointer to grayscale image struct*/
-struct grayscale_image *get_grayscale(struct ppm_image *image) {
+struct grayscale_image *convert_rgb_to_grayscale(struct ppm_image *image) {
     struct grayscale_image *gi = malloc(sizeof(struct grayscale_image));
     u_int8_t **arr = allocate_double_matrix(image->height, image->width);
     for (int i = 0; i < image->height; i++) {
@@ -53,7 +53,7 @@ struct grayscale_image *get_grayscale(struct ppm_image *image) {
 }
 
 /* Function converts each [i,j] pixel in f1 ppm image to pixel with gray[i][j] color */
-void convert_to_grayscale(struct ppm_image *f1, u_int8_t **gray) {
+void convert_grayscale_to_rgb(struct ppm_image *f1, u_int8_t **gray) {
     for (int i = 0; i < f1->width * f1->height; i++) {
         {
             int r = ceil(i / f1->width), c = i % f1->width;
@@ -117,7 +117,6 @@ struct grayscale_image *convert_to_sobel(struct grayscale_image *gr, int thread_
     new_im->height = gr->height;
     return new_im;
 }
-
 
 /* Function frees memory used by grayscale image */
 void free_grayscale_image(struct grayscale_image *image) {

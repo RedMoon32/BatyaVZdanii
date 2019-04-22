@@ -106,7 +106,7 @@ struct ppm_image *read_ppm(char *filename) {
  * Gray - pointer to grayscale image (for saving file in P2 and P5 formats)
  * Returns -1 on error, 0 on success
  */
-int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gray) {
+int save_ppm(struct ppm_image *file, char *file_path, u_int8_t **gray) {
     FILE *fp = fopen(file_path, "w");
     if (fp == NULL || file->matrix == NULL) {
         return -1;
@@ -122,9 +122,9 @@ int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gr
             else if (image_format == P6)
                 fprintf(fp, "%c%c%c", color->r, color->g, color->b);
             else if (image_format == P2)
-                fprintf(fp, "%d ", gray->matrix[i][j]);
+                fprintf(fp, "%d ", gray[i][j]);
             else if (image_format == P5)
-                fprintf(fp, "%c",  gray->matrix[i][j]);
+                fprintf(fp, "%c",  gray[i][j]);
         }
         if (image_format == P3)
             fprintf(fp, "\n");
@@ -132,3 +132,4 @@ int save_ppm(struct ppm_image *file, char *file_path, struct grayscale_image *gr
     fclose(fp);
     return 0;
 }
+

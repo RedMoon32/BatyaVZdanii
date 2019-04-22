@@ -48,7 +48,7 @@ void process_image(char *input_file, char *output_file, char *save_mode, int thr
 
     printf("[log] Image successfully read\n[log] Converting rgb image to grayscale...\n");
 
-    struct grayscale_image *gray = get_grayscale(p);
+    struct grayscale_image *gray = convert_rgb_to_grayscale(p);
     wallclock_mark(&sobel_time);
     printf("[log] Applying sobel operator...\n");
 
@@ -57,11 +57,11 @@ void process_image(char *input_file, char *output_file, char *save_mode, int thr
     printf("[log] Converting grayscale image back to rgb representation...\n");
     //Convert rgb to grayscale for saving if P3 or P6
     if (p->type[1] == '3' || p->type[1] == '6')
-        convert_to_grayscale(p, new_gray->matrix);
+        convert_grayscale_to_rgb(p, new_gray->matrix);
     strcpy(p->type, save_mode);
     printf("[log] Saving image...\n");
 
-    int s = save_ppm(p, output_file, new_gray);
+    int s = save_ppm(p, output_file, new_gray->matrix);
     if (s != -1)
         printf("[log] Image successfully saved to %s\n", output_file);
     else {
@@ -96,6 +96,12 @@ int main(int argc, char *argv[]) {
                 break;
             case 's':
                 strcpy(mode, optarg);
+                enum netpbm_type ftype = get_itype(mode);
+                // no support of P1 and P4 for now
+                if (ftype == -1 || ftype == P1 || ftype == P4) {
+                    printf("[ERROR] Save mode is not known\n");
+                    return -1;
+                }
                 break;
             case 't':
                 thread_count = atoi(optarg);
